@@ -1,0 +1,50 @@
+name: Build APK
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Depoyu al
+        uses: actions/checkout@v4
+
+      - name: Zip'i ac
+        run: |
+          ZIP=$(ls *.zip | head -n 1)
+          echo "Zip: $ZIP"
+          mkdir -p proje
+          unzip -q "$ZIP" -d proje
+          SETTINGS=$(find proje -name settings.gradle | head -n 1)
+          ROOT=$(dirname "$SETTINGS")
+          echo "Proje klasoru: $ROOT"
+          echo "ROOT=$ROOT" >> $GITHUB_ENV
+
+      - name: JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Android SDK
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platforms;android-34" "build-tools;34.0.0" > /dev/null
+
+      - name: Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.7
+
+      - name: APK derle
+        run: |
+          cd "$ROOT"
+          gradle assembleDebug --no-daemon --stacktrace
+
+      - name: APK yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexus-vr-apk
+          path: ${{ env.ROOT }}/app/build/outputs/apk/debug/app-debug.apk
